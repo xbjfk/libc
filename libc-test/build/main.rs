@@ -1052,10 +1052,6 @@ fn test_solarish(t: &Target) {
         match struct_.ident() {
             // rust struct was committed with typo for Solaris
             "door_arg_t" if field.ident() == "dec_num" => Some("desc_num".to_string()),
-            "stat" if field.ident().ends_with("_nsec") => {
-                // expose stat.Xtim.tv_nsec fields
-                Some(field.ident().trim_end_matches("e_nsec").to_string() + ".tv_nsec")
-            }
             _ => None,
         }
     });
