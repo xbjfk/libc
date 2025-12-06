@@ -4179,14 +4179,6 @@ fn test_linux(t: &Target) {
 
     cfg.rename_struct_field(move |struct_, field| {
         match (struct_.ident(), field.ident()) {
-            // Our stat *_nsec fields normally don't actually exist but are part
-            // of a timeval struct - this is fixed in musl_v1_2
-            ("stat" | "statfs" | "statvfs" | "stat64" | "statfs64" | "statvfs64", f)
-                if !musl_v1_2 && f.ends_with("_nsec") =>
-            {
-                Some(f.replace("e_nsec", ".tv_nsec"))
-            }
-
             // The following structs have a field called `type` in C,
             // but `type` is a Rust keyword, so these fields are translated
             // to `type_` in Rust.
