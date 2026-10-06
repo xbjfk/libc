@@ -3946,6 +3946,7 @@ fn test_linux(t: &Target) {
     }
 
     let old_musl = musl && !musl_v1_2;
+    let new_musl = musl && musl_v1_2;
 
     let mut cfg = ctest_cfg();
 
@@ -4257,12 +4258,8 @@ fn test_linux(t: &Target) {
 
     cfg.skip_alias(move |alias| {
         let ty = alias.ident();
-        // FIXME(musl): very recent additions to musl, not yet released.
-        // also apparently some glibc versions
-        if ty == "Elf32_Relr" || ty == "Elf64_Relr" {
-            return true;
-        }
-        if sparc64 && (ty == "Elf32_Rela" || ty == "Elf64_Rela") {
+        // Added in musl 1.2.5
+        if old_musl && (ty == "Elf32_Relr" || ty == "Elf64_Relr") {
             return true;
         }
         match ty {
@@ -4308,11 +4305,6 @@ fn test_linux(t: &Target) {
             return true;
         }
 
-        // FIXME(linux): sparc64 CI has old headers
-        if sparc64 && (ty == "uinput_ff_erase" || ty == "uinput_abs_setup") {
-            return true;
-        }
-
         // FIXME(rust-lang/rust#43894): pass by value for structs that are not an even 32/64 bits
         // on big-endian systems corrupts the value for unknown reasons.
         if (sparc64 || ppc || s390x)
@@ -4327,10 +4319,7 @@ fn test_linux(t: &Target) {
         }
 
         // FIXME(musl): musl doesn't compile with `struct fanout_args` for unknown reasons.
-        if musl && ty == "fanout_args" {
-            return true;
-        }
-        if sparc64 && ty == "fanotify_event_info_error" {
+        if old_musl && ty == "fanout_args" {
             return true;
         }
 
@@ -4406,14 +4395,11 @@ fn test_linux(t: &Target) {
             // a conflict with the `iovec` definition.
             "dmabuf_cmsg" | "dmabuf_token" => true,
 
-            // FIXME(musl): Struct has changed for new musl versions
-            "tcp_info" if musl => true,
+            // Struct has changed in newer musl versions
+            "tcp_info" if old_musl => true,
 
             // Added in musl 1.2.5
             "statx" | "statx_timestamp" if old_musl => true,
-
-            // FIXME(musl): New fields in newer versions
-            "utmpx" if !old_musl => true,
 
             // FIXME(linux): Requires >= 6.16 kernel headers.
             // On 64 bits the size did not change, skip only for 32 bits.
@@ -4720,9 +4706,6 @@ fn test_linux(t: &Target) {
             // https://github.com/sailfishos-mirror/glibc/commit/5d98a7dae955bafa6740c26eaba9c86060ae0344
             "PTHREAD_STACK_MIN" | "SIGSTKSZ" | "MINSIGSTKSZ" if gnu => true,
 
-            // value changed
-            "NF_NETDEV_NUMHOOKS" if sparc64 => true,
-
             // Canonical uclibc latest from toolchains.bootlin.com is based on kernel 5.15,
             // so opt out of tests for constants which are different in later kernels.
             "NF_NETDEV_NUMHOOKS" | "RLIM_NLIMITS" | "NFT_MSG_MAX" if uclibc => true,
@@ -4893,10 +4876,6 @@ fn test_linux(t: &Target) {
             // https://github.com/gnzlbg/ctest/issues/68
             "lio_listio" if musl => true,
 
-            // Needs glibc 2.34 or later.
-            "posix_spawn_file_actions_addclosefrom_np" if gnu && sparc64 => true,
-            // Needs glibc 2.35 or later.
-            "posix_spawn_file_actions_addtcsetpgrp_np" if gnu && sparc64 => true,
             // Needs glibc 2.42 or later.
             "pthread_gettid_np" if gnu && versions.glibc.unwrap() < (2, 42) => true,
 
@@ -4939,8 +4918,8 @@ fn test_linux(t: &Target) {
             "preadv2" | "pwritev2" if old_musl => true,
             // Added in musl 1.2.5
             "statx" if old_musl => true,
-            // FIXME(musl): Supported since musl 1.2.6 but not yet in CI.
-            "renameat2" if musl => true,
+            // Added in musl 1.2.6
+            "renameat2" if old_musl => true,
 
             // Needs glibc 2.33 or later.
             "mallinfo2" => true,
@@ -4997,11 +4976,7 @@ fn test_linux(t: &Target) {
             // FIXME(linux): `adjust_phase` requires >= 5.7 kernel headers
             // FIXME(linux): `max_phase_adj` requires >= 5.19 kernel headers
             // the rsv field shrunk when those fields got added, so is omitted too
-            ("ptp_clock_caps", "adjust_phase" | "max_phase_adj" | "rsv")
-                if (loongarch64 || sparc64) =>
-            {
-                true
-            }
+            ("ptp_clock_caps", "adjust_phase" | "max_phase_adj" | "rsv") if (loongarch64) => true,
             _ => false,
         }
     });
@@ -5022,7 +4997,7 @@ fn test_linux(t: &Target) {
                 "signalfd_siginfo",
                 "ssi_addr_lsb" | "_pad2" | "ssi_syscall" | "ssi_call_addr" | "ssi_arch",
             ) => true,
-            // FIXME(musl): After musl 1.1.24, it have only one field `sched_priority`,
+            // After musl 1.1.24, it have only one field `sched_priority`,
             // while other fields become reserved.
             (
                 "sched_param",
@@ -5030,7 +5005,7 @@ fn test_linux(t: &Target) {
                 | "sched_ss_repl_period"
                 | "sched_ss_init_budget"
                 | "sched_ss_max_repl",
-            ) if musl => true,
+            ) if old_musl => true,
             // After musl 1.1.24, the type becomes `int` instead of `unsigned short`.
             ("ipc_perm", "__seq") if old_musl && aarch64 => true,
             // glibc uses unnamed fields here and Rust doesn't support that yet
@@ -5078,7 +5053,7 @@ fn test_linux(t: &Target) {
             // FIXME(linux): `max_phase_adj` requires >= 5.19 kernel headers
             // the rsv field shrunk when those fields got added, so is omitted too
             ("ptp_clock_caps", "adjust_phase" | "max_phase_adj" | "rsv")
-                if loongarch64 || sparc64 || uclibc =>
+                if loongarch64 || uclibc =>
             {
                 true
             }

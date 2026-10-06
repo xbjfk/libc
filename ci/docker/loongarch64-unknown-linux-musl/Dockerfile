@@ -21,6 +21,6 @@ ENV CC_loongarch64_unknown_linux_musl=musl-gcc \
     CFLAGS_loongarch64_unknown_linux_musl="-mabi=lp64d -fPIC" \
     CARGO_TARGET_LOONGARCH64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc \
     CARGO_TARGET_LOONGARCH64_UNKNOWN_LINUX_MUSL_RUNNER="qemu-loongarch64" \
-    EXTRA_RUSTFLAGS="-Ctarget-feature=+crt-static" \
+    EXTRA_RUSTFLAGS="-L /musl-loongarch64/lib" \
     QEMU_LD_PREFIX=/musl-loongarch64 \
     PATH=$PATH:/musl-loongarch64/bin:/rust/bin
