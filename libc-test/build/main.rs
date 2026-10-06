@@ -4262,9 +4262,6 @@ fn test_linux(t: &Target) {
         if ty == "Elf32_Relr" || ty == "Elf64_Relr" {
             return true;
         }
-        if sparc64 && (ty == "Elf32_Rela" || ty == "Elf64_Rela") {
-            return true;
-        }
         match ty {
             // FIXME(sighandler): `sighandler_t` type is incorrect, see:
             // https://github.com/rust-lang/libc/issues/1359
@@ -4308,11 +4305,6 @@ fn test_linux(t: &Target) {
             return true;
         }
 
-        // FIXME(linux): sparc64 CI has old headers
-        if sparc64 && (ty == "uinput_ff_erase" || ty == "uinput_abs_setup") {
-            return true;
-        }
-
         // FIXME(rust-lang/rust#43894): pass by value for structs that are not an even 32/64 bits
         // on big-endian systems corrupts the value for unknown reasons.
         if (sparc64 || ppc || s390x)
@@ -4328,9 +4320,6 @@ fn test_linux(t: &Target) {
 
         // FIXME(musl): musl doesn't compile with `struct fanout_args` for unknown reasons.
         if musl && ty == "fanout_args" {
-            return true;
-        }
-        if sparc64 && ty == "fanotify_event_info_error" {
             return true;
         }
 
@@ -4720,9 +4709,6 @@ fn test_linux(t: &Target) {
             // https://github.com/sailfishos-mirror/glibc/commit/5d98a7dae955bafa6740c26eaba9c86060ae0344
             "PTHREAD_STACK_MIN" | "SIGSTKSZ" | "MINSIGSTKSZ" if gnu => true,
 
-            // value changed
-            "NF_NETDEV_NUMHOOKS" if sparc64 => true,
-
             // Canonical uclibc latest from toolchains.bootlin.com is based on kernel 5.15,
             // so opt out of tests for constants which are different in later kernels.
             "NF_NETDEV_NUMHOOKS" | "RLIM_NLIMITS" | "NFT_MSG_MAX" if uclibc => true,
@@ -4893,10 +4879,6 @@ fn test_linux(t: &Target) {
             // https://github.com/gnzlbg/ctest/issues/68
             "lio_listio" if musl => true,
 
-            // Needs glibc 2.34 or later.
-            "posix_spawn_file_actions_addclosefrom_np" if gnu && sparc64 => true,
-            // Needs glibc 2.35 or later.
-            "posix_spawn_file_actions_addtcsetpgrp_np" if gnu && sparc64 => true,
             // Needs glibc 2.42 or later.
             "pthread_gettid_np" if gnu && versions.glibc.unwrap() < (2, 42) => true,
 
@@ -4997,11 +4979,7 @@ fn test_linux(t: &Target) {
             // FIXME(linux): `adjust_phase` requires >= 5.7 kernel headers
             // FIXME(linux): `max_phase_adj` requires >= 5.19 kernel headers
             // the rsv field shrunk when those fields got added, so is omitted too
-            ("ptp_clock_caps", "adjust_phase" | "max_phase_adj" | "rsv")
-                if (loongarch64 || sparc64) =>
-            {
-                true
-            }
+            ("ptp_clock_caps", "adjust_phase" | "max_phase_adj" | "rsv") if (loongarch64) => true,
             _ => false,
         }
     });
@@ -5078,7 +5056,7 @@ fn test_linux(t: &Target) {
             // FIXME(linux): `max_phase_adj` requires >= 5.19 kernel headers
             // the rsv field shrunk when those fields got added, so is omitted too
             ("ptp_clock_caps", "adjust_phase" | "max_phase_adj" | "rsv")
-                if loongarch64 || sparc64 || uclibc =>
+                if loongarch64 || uclibc =>
             {
                 true
             }
