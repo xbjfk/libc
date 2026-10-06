@@ -3946,6 +3946,7 @@ fn test_linux(t: &Target) {
     }
 
     let old_musl = musl && !musl_v1_2;
+    let new_musl = musl && musl_v1_2;
 
     let mut cfg = ctest_cfg();
 
@@ -4257,9 +4258,8 @@ fn test_linux(t: &Target) {
 
     cfg.skip_alias(move |alias| {
         let ty = alias.ident();
-        // FIXME(musl): very recent additions to musl, not yet released.
-        // also apparently some glibc versions
-        if ty == "Elf32_Relr" || ty == "Elf64_Relr" {
+        // Added in musl 1.2.5
+        if old_musl && (ty == "Elf32_Relr" || ty == "Elf64_Relr") {
             return true;
         }
         match ty {
@@ -4319,7 +4319,7 @@ fn test_linux(t: &Target) {
         }
 
         // FIXME(musl): musl doesn't compile with `struct fanout_args` for unknown reasons.
-        if musl && ty == "fanout_args" {
+        if old_musl && ty == "fanout_args" {
             return true;
         }
 
@@ -4395,14 +4395,11 @@ fn test_linux(t: &Target) {
             // a conflict with the `iovec` definition.
             "dmabuf_cmsg" | "dmabuf_token" => true,
 
-            // FIXME(musl): Struct has changed for new musl versions
-            "tcp_info" if musl => true,
+            // Struct has changed in newer musl versions
+            "tcp_info" if old_musl => true,
 
             // Added in musl 1.2.5
             "statx" | "statx_timestamp" if old_musl => true,
-
-            // FIXME(musl): New fields in newer versions
-            "utmpx" if !old_musl => true,
 
             // FIXME(linux): Requires >= 6.16 kernel headers.
             // On 64 bits the size did not change, skip only for 32 bits.
@@ -4921,8 +4918,8 @@ fn test_linux(t: &Target) {
             "preadv2" | "pwritev2" if old_musl => true,
             // Added in musl 1.2.5
             "statx" if old_musl => true,
-            // FIXME(musl): Supported since musl 1.2.6 but not yet in CI.
-            "renameat2" if musl => true,
+            // Added in musl 1.2.6
+            "renameat2" if old_musl => true,
 
             // Needs glibc 2.33 or later.
             "mallinfo2" => true,
@@ -5000,7 +4997,7 @@ fn test_linux(t: &Target) {
                 "signalfd_siginfo",
                 "ssi_addr_lsb" | "_pad2" | "ssi_syscall" | "ssi_call_addr" | "ssi_arch",
             ) => true,
-            // FIXME(musl): After musl 1.1.24, it have only one field `sched_priority`,
+            // After musl 1.1.24, it have only one field `sched_priority`,
             // while other fields become reserved.
             (
                 "sched_param",
@@ -5008,7 +5005,7 @@ fn test_linux(t: &Target) {
                 | "sched_ss_repl_period"
                 | "sched_ss_init_budget"
                 | "sched_ss_max_repl",
-            ) if musl => true,
+            ) if old_musl => true,
             // After musl 1.1.24, the type becomes `int` instead of `unsigned short`.
             ("ipc_perm", "__seq") if old_musl && aarch64 => true,
             // glibc uses unnamed fields here and Rust doesn't support that yet
